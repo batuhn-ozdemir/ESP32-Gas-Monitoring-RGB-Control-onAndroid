@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#F4F6F8">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/titleTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ESP32 Gaz ve RGB LED Kontrol Paneli"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#111111"
+            android:paddingBottom="12dp" />
+
+        <TextView
+            android:id="@+id/connectionTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cihaz Bağlantısı: -"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#111111"
+            android:padding="8dp" />
+
+        <TextView
+            android:id="@+id/gasTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Gaz Değeri: -"
+            android:textSize="18sp"
+            android:textColor="#111111"
+            android:padding="8dp" />
+
+        <TextView
+            android:id="@+id/ledTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LED Durumu: -"
+            android:textSize="18sp"
+            android:textColor="#111111"
+            android:padding="8dp" />
+
+        <TextView
+            android:id="@+id/rgbTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RGB: -"
+            android:textSize="16sp"
+            android:textColor="#333333"
+            android:padding="8dp" />
+
+        <TextView
+            android:id="@+id/updateTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Son Güncelleme: -"
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:padding="8dp" />
+
+        <View
+            android:id="@+id/colorPreviewView"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="#000000" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="LED Aç / Kapat"
+                android:textSize="16sp"
+                android:textColor="#111111" />
+
+            <Switch
+                android:id="@+id/ledSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/redValueTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Kırmızı: 255"
+            android:textColor="#C62828"
+            android:textStyle="bold"
+            android:paddingTop="8dp" />
+
+        <SeekBar
+            android:id="@+id/redSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="255" />
+
+        <TextView
+            android:id="@+id/greenValueTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Yeşil: 0"
+            android:textColor="#2E7D32"
+            android:textStyle="bold"
+            android:paddingTop="8dp" />
+
+        <SeekBar
+            android:id="@+id/greenSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="255" />
+
+        <TextView
+            android:id="@+id/blueValueTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mavi: 0"
+            android:textColor="#1565C0"
+            android:textStyle="bold"
+            android:paddingTop="8dp" />
+
+        <SeekBar
+            android:id="@+id/blueSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="255" />
+
+        <TextView
+            android:id="@+id/brightnessValueTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Parlaklık: 255"
+            android:textColor="#333333"
+            android:textStyle="bold"
+            android:paddingTop="8dp" />
+
+        <SeekBar
+            android:id="@+id/brightnessSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="255" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Renkler"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#111111"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/redButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Kırmızı" />
+
+            <Button
+                android:id="@+id/greenButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Yeşil" />
+
+            <Button
+                android:id="@+id/blueButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Mavi" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
+
+            <Button
+                android:id="@+id/whiteButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Beyaz" />
+
+            <Button
+                android:id="@+id/yellowButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Sarı" />
+
+            <Button
+                android:id="@+id/purpleButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Mor" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/offButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LED Kapat"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Geçmiş Kayıtlar"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#111111"
+            android:paddingTop="20dp"
+            android:paddingBottom="8dp" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/historyTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Geçmiş kayıt yok"
+                android:textSize="13sp"
+                android:textColor="#111111"
+                android:typeface="monospace"
+                android:padding="8dp" />
+
+        </HorizontalScrollView>
+
+    </LinearLayout>
+
+</ScrollView>
