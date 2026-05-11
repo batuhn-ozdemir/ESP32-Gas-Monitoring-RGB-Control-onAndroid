@@ -1,5 +1,6 @@
 package com.batuhan.esp32_backend.dto;
 
+// Android'den gelen led kontrol isteğini temsil eder
 public class ControlRequest {
 
     private boolean ledOn;

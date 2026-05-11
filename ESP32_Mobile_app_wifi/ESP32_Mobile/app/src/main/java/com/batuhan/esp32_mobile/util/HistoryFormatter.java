@@ -4,6 +4,7 @@ import com.batuhan.esp32_mobile.model.HistoryItem;
 
 import java.util.List;
 
+// Geçmiş kayıtları ekranda okunabilir tablo formatına çevirir
 public final class HistoryFormatter {
 
     private HistoryFormatter() {

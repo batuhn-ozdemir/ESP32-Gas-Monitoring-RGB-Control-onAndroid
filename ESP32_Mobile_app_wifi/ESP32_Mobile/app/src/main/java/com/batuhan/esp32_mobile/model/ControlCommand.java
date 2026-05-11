@@ -2,6 +2,7 @@ package com.batuhan.esp32_mobile.model;
 
 import org.json.JSONObject;
 
+// Kullanıcının uygulamadan gönderdiği led kontrol komutunu temsil eder
 public class ControlCommand {
 
     private final boolean ledOn;
@@ -18,6 +19,7 @@ public class ControlCommand {
         this.brightness = clamp(brightness);
     }
 
+    // Komut backend'in beklediği JSON formatına çevrilir
     public JSONObject toJson() throws Exception {
         JSONObject jsonObject = new JSONObject();
 
@@ -51,6 +53,7 @@ public class ControlCommand {
         return brightness;
     }
 
+    // RGB ve parlaklık değerlerini güvenli aralıkta tutar
     private static int clamp(int value) {
         if (value < 0) return 0;
         if (value > 255) return 255;

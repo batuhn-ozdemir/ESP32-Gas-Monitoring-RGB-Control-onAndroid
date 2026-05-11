@@ -10,6 +10,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+// Android uygulaması ile backend arasındaki WebSocket mesajlarını yönetir
 @Component
 public class DeviceWebSocketHandler extends TextWebSocketHandler {
 
@@ -25,6 +26,7 @@ public class DeviceWebSocketHandler extends TextWebSocketHandler {
         this.deviceService = deviceService;
     }
 
+    // Android bağlanır bağlanmaz aktif session listesine eklenir ve son cihaz durumu gönderilir
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         broadcaster.addSession(session);
@@ -33,6 +35,7 @@ public class DeviceWebSocketHandler extends TextWebSocketHandler {
         broadcaster.sendToSession(session, deviceService.getLatestState());
     }
 
+    // Android'den gelen WebSocket mesajları burada işlenir
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
@@ -54,6 +57,7 @@ public class DeviceWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
 
+            // Basit bağlantı kontrolü için ping mesajına pong cevabı döndürülür
             if ("ping".equals(type)) {
                 session.sendMessage(new TextMessage("{\"type\":\"pong\"}"));
             }
@@ -63,11 +67,13 @@ public class DeviceWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    // Bağlantı kapandığında session listeden çıkarılır
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         broadcaster.removeSession(session);
     }
 
+    // WebSocket taşıma hatalarında session temizlenir
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) {
         System.out.println("WebSocket transport hatası: " + exception.getMessage());

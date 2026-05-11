@@ -2,6 +2,7 @@ package com.batuhan.esp32_mobile.model;
 
 import org.json.JSONObject;
 
+// Veritabanından gelen tek bir geçmiş kayıt satırını temsil eder
 public class HistoryItem {
 
     private final String recordedAt;
@@ -30,6 +31,7 @@ public class HistoryItem {
         this.brightness = brightness;
     }
 
+    // REST API'den gelen JSON kayıt nesneye çevrilir
     public static HistoryItem fromJson(JSONObject jsonObject) {
         return new HistoryItem(
                 jsonObject.optString("recordedAt", "-"),

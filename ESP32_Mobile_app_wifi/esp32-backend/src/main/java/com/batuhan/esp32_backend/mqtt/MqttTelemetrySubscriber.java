@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+// ESP32'den gelen telemetry mesajlarını MQTT üzerinden dinler
 @Component
 public class MqttTelemetrySubscriber {
 
@@ -38,6 +39,7 @@ public class MqttTelemetrySubscriber {
         this.deviceService = deviceService;
     }
 
+    // Uygulama açıldığında MQTT broker'a bağlanılır ve telemetry topic'i dinlenir
     @PostConstruct
     public void connectAndSubscribe() throws Exception {
         String clientId = "spring-subscriber-" + UUID.randomUUID();
@@ -75,12 +77,13 @@ public class MqttTelemetrySubscriber {
                 System.out.println("MQTT telemetry geldi. Topic: " + topic);
                 System.out.println("Payload: " + payload);
 
+                // Gelen telemetry verisi ana servis tarafında işlenir
                 deviceService.receiveTelemetryPayload(payload);
             }
 
             @Override
             public void deliveryComplete(IMqttDeliveryToken token) {
-                // Subscriber tarafında genelde kullanılmıyor.
+                // Subscriber tarafında genelde kullanılmıyor
             }
         });
 
@@ -91,6 +94,7 @@ public class MqttTelemetrySubscriber {
         System.out.println("Dinlenen topic: " + telemetryTopic);
     }
 
+    // Uygulama kapanırken MQTT bağlantısı düzgün şekilde kapatılır
     @PreDestroy
     public void disconnect() throws Exception {
         if (client != null && client.isConnected()) {

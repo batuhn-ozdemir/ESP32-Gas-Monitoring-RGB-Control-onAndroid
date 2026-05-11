@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+// Cihazdan gelen verilerin işlendiği, saklandığı ve mobil tarafa aktarıldığı ana servis sınıfıdır
 @Service
 public class DeviceService {
 
@@ -25,13 +26,18 @@ public class DeviceService {
     private final DeviceWebSocketBroadcaster webSocketBroadcaster;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // Tarih bilgisinin Türkiye saatine göre tutulması için kullanılır
     private static final ZoneId TURKEY_ZONE = ZoneId.of("Europe/Istanbul");
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    // Belirli süre telemetry gelmezse cihaz bağlı değil kabul edilir
     private static final long DEVICE_TIMEOUT_MS = 2000;
+
+    // Geçmiş kayıtları her telemetry'de değil, belirli aralıklarla veritabanına yazılır
     private static final long HISTORY_INTERVAL_MS = 60_000;
 
+    // ESP32'den gelen son gaz ve LED değerleri bellekte tutulur
     private int gasValue = 0;
     private boolean ledOn = false;
     private int red = 255;
@@ -55,6 +61,7 @@ public class DeviceService {
         this.webSocketBroadcaster = webSocketBroadcaster;
     }
 
+    // Uygulama başladıktan sonra SQLite ayarları yapılır ve tablo oluşturulur
     @PostConstruct
     public void initDatabase() {
         jdbcTemplate.execute("PRAGMA journal_mode=WAL");
@@ -63,6 +70,7 @@ public class DeviceService {
         createTelemetryHistoryTable();
     }
 
+    // Telemetry geçmiş kayıtlarının tutulacağı tablo yoksa oluşturulur
     private void createTelemetryHistoryTable() {
         jdbcTemplate.execute("""
             CREATE TABLE IF NOT EXISTS telemetry_history (
@@ -78,6 +86,7 @@ public class DeviceService {
         """);
     }
 
+    // MQTT'den gelen ham JSON payload okunur ve anlamlı değerlere çevrilir
     public synchronized void receiveTelemetryPayload(String payload) {
         try {
             JsonNode json = objectMapper.readTree(payload);
@@ -143,6 +152,7 @@ public class DeviceService {
         lastBroadcastConnected = isDeviceConnected(nowMs);
     }
 
+    // Android'den gelen LED komutu MQTT ile ESP32'ye gönderilir
     public synchronized Map<String, Object> updateLed(ControlRequest request) {
         int commandRed = clamp(request.getRed());
         int commandGreen = clamp(request.getGreen());
@@ -164,6 +174,7 @@ public class DeviceService {
         return latestState;
     }
 
+    // Mobil uygulamaya gönderilecek son cihaz durumunu hazırlar
     public synchronized Map<String, Object> getLatestState() {
         boolean connected = isDeviceConnected(System.currentTimeMillis());
 
@@ -199,6 +210,7 @@ public class DeviceService {
         return result;
     }
 
+    // Geçmiş kayıtları son eklenen kayıtlar üstte olacak şekilde getirir
     public List<Map<String, Object>> getHistory(int limit) {
         int safeLimit = Math.min(Math.max(limit, 1), 500);
 
@@ -218,6 +230,7 @@ public class DeviceService {
         """, safeLimit);
     }
 
+    // Cihaz bağlıysa ve kayıt zamanı geldiyse geçmişe yeni kayıt eklenir
     private void saveHistoryIfConnectedAndDue(long nowMs) {
         if (!isDeviceConnected(nowMs)) {
             return;
@@ -231,6 +244,7 @@ public class DeviceService {
         lastHistorySaveMs = nowMs;
     }
 
+    // Son kayıttan yeterli süre geçmiş mi kontrol edilir
     private boolean shouldSaveHistory(long nowMs) {
         if (lastHistorySaveMs <= 0) {
             return true;
@@ -239,6 +253,7 @@ public class DeviceService {
         return nowMs - lastHistorySaveMs >= HISTORY_INTERVAL_MS;
     }
 
+    // Anlık cihaz durumu veritabanına kaydedilir
     private void saveHistory() {
         jdbcTemplate.update("""
             INSERT INTO telemetry_history (
@@ -262,6 +277,7 @@ public class DeviceService {
         );
     }
 
+    // LED komutu JSON formatına çevrilip MQTT publisher'a verilir
     private void publishControlToMqtt(
             boolean commandLedOn,
             int commandRed,
@@ -281,6 +297,7 @@ public class DeviceService {
         mqttPublisher.publishControl(payload);
     }
 
+    // Son telemetry zamanına bakılarak cihazın bağlı olup olmadığı anlaşılır
     private boolean isDeviceConnected(long nowMs) {
         if (lastTelemetryAtMs <= 0) {
             return false;
@@ -289,6 +306,7 @@ public class DeviceService {
         return nowMs - lastTelemetryAtMs <= DEVICE_TIMEOUT_MS;
     }
 
+    // Her saniye cihaz bağlantı durumunda değişiklik var mı diye kontrol edilir
     @Scheduled(fixedRate = 1000)
     public synchronized void checkDeviceConnectionStatus() {
         boolean connected = isDeviceConnected(System.currentTimeMillis());
@@ -299,6 +317,7 @@ public class DeviceService {
         }
     }
 
+    // RGB ve parlaklık değerlerinin 0-255 arasında kalmasını sağlar
     private int clamp(int value) {
         if (value < 0) {
             return 0;
@@ -311,6 +330,7 @@ public class DeviceService {
         return value;
     }
 
+    // Tarih ve saat bilgisi ekranda okunabilir formatta hazırlanır
     private static String nowText() {
         return ZonedDateTime.now(TURKEY_ZONE).format(DATE_FORMATTER);
     }

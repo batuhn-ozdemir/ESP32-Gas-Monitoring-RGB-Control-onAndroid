@@ -13,8 +13,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+// Backend'deki REST endpointlerine HTTP istekleri gönderen sınıftır
 public class DeviceApiClient {
 
+    // Backend'den geçmiş cihaz kayıtlarını alır
     public List<HistoryItem> getHistory(int limit) throws Exception {
         String response = sendGet("/api/device/history?limit=" + limit);
 
@@ -28,6 +30,7 @@ public class DeviceApiClient {
         return items;
     }
 
+    // Verilen endpoint'e GET isteği atar
     private String sendGet(String endpoint) throws Exception {
         URL url = new URL(AppConfig.BASE_URL + endpoint);
 
@@ -48,6 +51,7 @@ public class DeviceApiClient {
         return responseBody;
     }
 
+    // HTTP cevabının gövdesini String olarak okur
     private String readResponse(HttpURLConnection connection, int responseCode) throws Exception {
         InputStream inputStream;
 

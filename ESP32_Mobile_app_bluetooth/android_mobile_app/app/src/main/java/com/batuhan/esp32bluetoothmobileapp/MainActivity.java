@@ -34,18 +34,23 @@ import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+// Bluetooth sürümündeki ana ekran sınıfıdır
+// ESP32 ile BLE üzerinden bağlantı kurar, gaz verisini alır ve LED kontrol komutlarını gönderir
 public class MainActivity extends Activity {
 
     // ESP32 mac adresi
     // ESP32'nin MAC adresini koy
     private static final String TARGET_MAC_ADDRESS = "AA:BB:12:34:56:78";
 
+    // ESP32 tarafında tanımlanan BLE servis UUID değeridir
     private static final UUID SERVICE_UUID =
             UUID.fromString("12345678-1234-1234-1234-1234567890ab");
 
+    // Gaz ve state bilgisinin alındığı characteristic UUID değeridir
     private static final UUID GAS_UUID =
             UUID.fromString("12345678-1234-1234-1234-1234567890ac");
 
+    // LED kontrol komutlarının gönderildiği characteristic UUID değeridir
     private static final UUID CONTROL_UUID =
             UUID.fromString("12345678-1234-1234-1234-1234567890ad");
 
@@ -54,9 +59,16 @@ public class MainActivity extends Activity {
     private static final UUID CCCD_UUID =
             UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
+    // Kontrol komutları çok sık gitmesin diye kısa gecikme uygulanır
     private static final int CONTROL_DEBOUNCE_MS = 100;
+
+    // BLE paket boyutunu artırmak için istenen MTU değeri
     private static final int REQUESTED_MTU = 256;
+
+    // Kullanıcı kontrolü yeni değiştirdiyse, gelen ESP32 state'i kısa süre UI değerlerini ezmez
     private static final long LOCAL_CONTROL_PROTECT_MS = 700;
+
+    // Gaz değerinin ekrana yazılma sıklığını sınırlar
     private static final long GAS_UI_UPDATE_INTERVAL_MS = 200;
 
     private long sonLocalKontrolDegisimSuresiMs = 0;
@@ -98,6 +110,7 @@ public class MainActivity extends Activity {
     private boolean baglimiKontrol = false;
     private boolean baglaniyormuKontrol = false;
 
+    // Led ve gaz için son bilinen değerler
     private boolean ledOn = false;
     private int red = 255;
     private int green = 0;
@@ -105,9 +118,11 @@ public class MainActivity extends Activity {
     private int brightness = 255;
     private int lastGasValue = 0;
 
+    // Handler'lar ana thread üzerinde gecikmeli işler çalıştırmak için kullanılır
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Handler controlHandler = new Handler(Looper.getMainLooper());
 
+    // Bağlantı kopunca tekrar bağlanma denemesi burada yapılır
     private final Runnable yenidenBaglanRunnable = new Runnable() {
         @Override
         public void run() {
@@ -117,6 +132,7 @@ public class MainActivity extends Activity {
         }
     };
 
+    // Led kontrol komutu debounce sonrası gönderilir
     private final Runnable komutGonderRunnable = new Runnable() {
         @Override
         public void run() {
@@ -124,6 +140,7 @@ public class MainActivity extends Activity {
         }
     };
 
+    // Telefonun Bluetooth açılıp kapanma durumu burada dinlenir
     private final BroadcastReceiver bluetoothDurumAlicisi = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -182,6 +199,7 @@ public class MainActivity extends Activity {
         }
     };
 
+    // BLE bağlantı, servis keşfi ve notification olayları burada yakalanır
     private final BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
 
         // "Call requires permission which may be rejected by user..."
@@ -289,6 +307,7 @@ public class MainActivity extends Activity {
             gazNotificationAktifEt(gatt, gasCharacteristic);
         }
 
+        // Android 13 ve üzeri callback yapısı
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic,
@@ -299,6 +318,7 @@ public class MainActivity extends Activity {
             }
         }
 
+        // Eski Android sürümleri için callback yapısı
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
@@ -378,6 +398,7 @@ public class MainActivity extends Activity {
         }
     }
 
+    // XML tarafındaki arayüz elemanları Java değişkenlerine bağlanır
     private void uiBirimleriniBagla() {
         connectionTextView = findViewById(R.id.connectionTextView);
         gasTextView = findViewById(R.id.gasTextView);
@@ -404,6 +425,7 @@ public class MainActivity extends Activity {
         ledKapatmaButon = findViewById(R.id.offButton);
     }
 
+    // SeekBar ve switch kontrollerinin başlangıç ayarları yapılır
     private void uiBirimleriniBaslat() {
         kirmiziAyarlamaBari.setMax(255);
         yesilAyarlamaBari.setMax(255);
@@ -537,6 +559,7 @@ public class MainActivity extends Activity {
         uiRenkBirimleriniGuncelle();
     }
 
+        // Hazır renk butonlarının renkleri ve tıklama olayları ayarlanır
     private void renkButonlariniBaslat() {
         kirmiziButon.setBackgroundColor(Color.rgb(220, 40, 40));
         yesilButon.setBackgroundColor(Color.rgb(40, 160, 70));
@@ -579,6 +602,7 @@ public class MainActivity extends Activity {
         });
     }
 
+    // Hazır renk seçildiğinde hem yerel değişkenler hem de arayüz güncellenir
     private void renkleriUygula(boolean turnOn, int r, int g, int b) {
         if (!esp32Baglimi) return;
 
@@ -605,6 +629,7 @@ public class MainActivity extends Activity {
         komutGonder();
     }
 
+    // Kullanıcının en son ne zaman kontrol değiştirdiği tutulur
     private void localSureyiGuncelle() {
         sonLocalKontrolDegisimSuresiMs = System.currentTimeMillis();
     }
@@ -616,6 +641,7 @@ public class MainActivity extends Activity {
         return kullaniciKaydiriyormuKontrol || (now - sonLocalKontrolDegisimSuresiMs < LOCAL_CONTROL_PROTECT_MS);
     }
 
+    // ESP32'den gelen LED değerleri arayüzdeki switch ve seekbarlara yansıtılır
     private void esp32denGelenLedDegerleriyleUiGuncelle() {
         esp32denmiGuncelleniyor = true;
 
@@ -644,6 +670,7 @@ public class MainActivity extends Activity {
         uiRenkBirimleriniGuncelle();
     }
 
+    // Gaz, LED, RGB ve parlaklık bilgileri ekrandaki TextView'e yazılır
     private void TextViewDegerleriniGuncelle(boolean stateConnected, int gasValue) {
         long now = System.currentTimeMillis();
 
@@ -662,6 +689,7 @@ public class MainActivity extends Activity {
         );
     }
 
+    // Bağlantı durumuna göre kontrol elemanları aktif veya pasif yapılır
     private void uiBaglantiTextVeButonEnablingGuncelle(boolean isConnected) {
         esp32Baglimi = isConnected;
 
@@ -687,11 +715,13 @@ public class MainActivity extends Activity {
         ledKapatmaButon.setEnabled(isConnected);
     }
 
+    // SeekBar hızlı değişirken her değişimi göndermek yerine kısa gecikmeyle son değer gönderilir
     private void kontroleGondermePlanla() {
         controlHandler.removeCallbacks(komutGonderRunnable);
         controlHandler.postDelayed(komutGonderRunnable, CONTROL_DEBOUNCE_MS);
     }
 
+    // ESP32'ye BLE GATT bağlantısı başlatılır
     @SuppressLint("MissingPermission")
     private void esp32Baglan() {
         if (baglimiKontrol || baglaniyormuKontrol) {
@@ -741,6 +771,7 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Bağlantı kurulduktan sonra ESP32 üzerindeki BLE servisleri aranır
     @SuppressLint("MissingPermission")
     private void servisAramaBaslat(BluetoothGatt gatt) {
         if (gatt == null) return;
@@ -751,6 +782,7 @@ public class MainActivity extends Activity {
         gatt.discoverServices();
     }
 
+    // Gaz characteristic'i için notification açılır
     @SuppressLint("MissingPermission")
     private void gazNotificationAktifEt(BluetoothGatt gatt,
                                        BluetoothGattCharacteristic characteristic) {
@@ -773,6 +805,7 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Eski Android sürümleri için notification descriptor yazımı
     @SuppressWarnings("deprecation")
     @SuppressLint("MissingPermission")
     private void writeDescriptorLegacy(BluetoothGatt gatt,
@@ -785,6 +818,7 @@ public class MainActivity extends Activity {
         gatt.writeDescriptor(descriptor);
     }
 
+    // ESP32'den gelen JSON state payload'u okunur ve ekrana yansıtılır
     private void gelenPayloadiOkuVeGuncelle(String payload) {
         try {
             JSONObject json = new JSONObject(payload);
@@ -852,6 +886,7 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Güncel LED kontrol değerleri ESP32'ye JSON olarak yazılır
     @SuppressLint("MissingPermission")
     private void komutGonder() {
         if (!baglimiKontrol) {
@@ -869,114 +904,43 @@ public class MainActivity extends Activity {
         try {
             JSONObject json = new JSONObject();
 
-            // Kısa key kullanıyoruz. ESP32 tarafında da bunları okuyacak.
-            json.put("l", ledOn);
-            json.put("r", red);
-            json.put("gr", green);
-            json.put("b", blue);
-            json.put("br", brightness);
+            json.put("ledOn", ledOn);
+            json.put("red", renkMenzilSaglama(red));
+            json.put("green", renkMenzilSaglama(green));
+            json.put("blue", renkMenzilSaglama(blue));
+            json.put("brightness", renkMenzilSaglama(brightness));
 
-            byte[] data = json.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] value = json.toString().getBytes(StandardCharsets.UTF_8);
 
-            // android 13 ve üzeri için
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 bluetoothGatt.writeCharacteristic(
                         controlCharacteristic,
-                        data,
+                        value,
                         BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
                 );
             } else {
-                writeCharacteristicLegacy(data);
+                writeCharacteristicLegacy(value);
             }
 
         } catch (Exception e) {
-            ekrandaAlttaBildirimGoster("Komut gönderilemedi");
+            durumTextAyarla("Komut gönderilemedi:\n" + e.getMessage());
         }
     }
 
+    // Android 13 öncesi characteristic yazma yöntemi
     @SuppressWarnings("deprecation")
     @SuppressLint("MissingPermission")
-    private void writeCharacteristicLegacy(byte[] data) {
-        if (bluetoothGatt == null || controlCharacteristic == null) {
-            return;
-        }
-
+    private void writeCharacteristicLegacy(byte[] value) {
         if (!baglantiIziniVarmiKontrol()) {
             return;
         }
 
         controlCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
-        controlCharacteristic.setValue(data);
+        controlCharacteristic.setValue(value);
         bluetoothGatt.writeCharacteristic(controlCharacteristic);
     }
 
-    private void uiRenkBirimleriniGuncelle() {
-        redValueTextView.setText("Kırmızı: " + red);
-        greenValueTextView.setText("Yeşil: " + green);
-        blueValueTextView.setText("Mavi: " + blue);
-        brightnessValueTextView.setText("Parlaklık: " + brightness);
-
-        int r = ledOn ? red : 0;
-        int g = ledOn ? green : 0;
-        int b = ledOn ? blue : 0;
-
-        colorPreviewView.setBackgroundColor(Color.rgb(r, g, b));
-    }
-
-    @SuppressLint("MissingPermission")
-    private void closeGatt() {
-        if (bluetoothGatt != null && baglantiIziniVarmiKontrol()) {
-            bluetoothGatt.close();
-        }
-
-        bluetoothGatt = null;
-        controlCharacteristic = null;
-        baglimiKontrol = false;
-        baglaniyormuKontrol = false;
-        servisAramaBasladimi = false;
-    }
-
-    private void yenidenBaglan() {
-        handler.removeCallbacks(yenidenBaglanRunnable);
-
-        if (!bluetoothHazirmiKontrol()) {
-            uiBaglantiTextVeButonEnablingGuncelle(false);
-            durumTextAyarla("Durum: Bağlı değil\nBluetooth kapalı");
-            return;
-        }
-
-        handler.postDelayed(yenidenBaglanRunnable, 2000);
-    }
-
-    private boolean bluetoothHazirmiKontrol() {
-        return bluetoothAdapter != null && bluetoothAdapter.isEnabled();
-    }
-
-    private void bluetoothAlicisinaKaydol() {
-        if (bluetoothAlicisiKayitlimi) {
-            return;
-        }
-
-        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(bluetoothDurumAlicisi, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(bluetoothDurumAlicisi, filter);
-        }
-
-        bluetoothAlicisiKayitlimi = true;
-    }
-
-    private void bluetoothAlicisindanCikisYap() {
-        if (!bluetoothAlicisiKayitlimi) {
-            return;
-        }
-
-        unregisterReceiver(bluetoothDurumAlicisi);
-        bluetoothAlicisiKayitlimi = false;
-    }
-
+        // Gerekli Bluetooth izinleri yoksa kullanıcıdan izin ister
     private void ihtiyacVarsaYetkiIste() {
         if (tumIzinlerSaglandimiKontrol()) {
             esp32Baglan();
@@ -986,9 +950,8 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             requestPermissions(
                     new String[]{
-                            Manifest.permission.BLUETOOTH_CONNECT,
                             Manifest.permission.BLUETOOTH_SCAN,
-                            Manifest.permission.ACCESS_FINE_LOCATION
+                            Manifest.permission.BLUETOOTH_CONNECT
                     },
                     100
             );
@@ -1002,46 +965,134 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Android sürümüne göre gerekli izinlerin verilip verilmediği kontrol edilir
     private boolean tumIzinlerSaglandimiKontrol() {
-        return baglantiIziniVarmiKontrol() && taramaIziniVarmiKontrol();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+                    && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
+    // BLE bağlantısı için gerekli connect iznini kontrol eder
     private boolean baglantiIziniVarmiKontrol() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
-                    == PackageManager.PERMISSION_GRANTED;
+            return checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
         }
 
         return true;
     }
 
-    private boolean taramaIziniVarmiKontrol() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)
-                    == PackageManager.PERMISSION_GRANTED;
+    // Bluetooth adaptörünün kullanılabilir ve açık olup olmadığını kontrol eder
+    private boolean bluetoothHazirmiKontrol() {
+        return bluetoothAdapter != null && bluetoothAdapter.isEnabled();
+    }
+
+    // Bluetooth açma kapama durumlarını dinleyen receiver kayıt edilir
+    private void bluetoothAlicisinaKaydol() {
+        if (bluetoothAlicisiKayitlimi) {
+            return;
         }
 
-        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED;
+        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                    bluetoothDurumAlicisi,
+                    filter,
+                    Context.RECEIVER_NOT_EXPORTED
+            );
+        } else {
+            registerReceiver(bluetoothDurumAlicisi, filter);
+        }
+
+        bluetoothAlicisiKayitlimi = true;
     }
 
-    private static int renkMenzilSaglama(int value) {
-        if (value < 0) return 0;
-        if (value > 255) return 255;
-        return value;
+    // Activity kapanırken Bluetooth receiver kaydı kaldırılır
+    private void bluetoothAlicisindanCikisYap() {
+        if (!bluetoothAlicisiKayitlimi) {
+            return;
+        }
+
+        try {
+            unregisterReceiver(bluetoothDurumAlicisi);
+        } catch (Exception ignored) {
+        }
+
+        bluetoothAlicisiKayitlimi = false;
     }
 
+    // Bağlantı koptuğunda veya hata olduğunda tekrar bağlanma işlemini gecikmeli başlatır
+    private void yenidenBaglan() {
+        handler.removeCallbacks(yenidenBaglanRunnable);
+        handler.postDelayed(yenidenBaglanRunnable, 1500);
+    }
+
+    // Açık GATT bağlantısı varsa kapatır ve referansları temizler
+    @SuppressLint("MissingPermission")
+    private void closeGatt() {
+        if (!baglantiIziniVarmiKontrol()) {
+            return;
+        }
+
+        try {
+            if (bluetoothGatt != null) {
+                bluetoothGatt.disconnect();
+                bluetoothGatt.close();
+            }
+        } catch (Exception ignored) {
+        }
+
+        bluetoothGatt = null;
+        controlCharacteristic = null;
+    }
+
+    // Durum yazıları ana thread üzerinden güncellenir
     private void durumTextAyarla(String text) {
-        handler.post(() -> gasTextView.setText(text));
+        handler.post(() -> {
+            if (gasTextView != null) {
+                gasTextView.setText(text);
+            }
+        });
     }
 
+    // Kısa bilgilendirme mesajı gösterir
     private void ekrandaAlttaBildirimGoster(String message) {
         handler.post(() ->
                 Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show()
         );
     }
 
-    private abstract static class SimpleSeekBarListener implements SeekBar.OnSeekBarChangeListener {
+    // RGB, parlaklık ve renk önizleme alanı güncellenir
+    private void uiRenkBirimleriniGuncelle() {
+        redValueTextView.setText("Kırmızı: " + red);
+        greenValueTextView.setText("Yeşil: " + green);
+        blueValueTextView.setText("Mavi: " + blue);
+        brightnessValueTextView.setText("Parlaklık: " + brightness);
+
+        int previewRed = ledOn ? red : 0;
+        int previewGreen = ledOn ? green : 0;
+        int previewBlue = ledOn ? blue : 0;
+
+        colorPreviewView.setBackgroundColor(Color.rgb(
+                renkMenzilSaglama(previewRed),
+                renkMenzilSaglama(previewGreen),
+                renkMenzilSaglama(previewBlue)
+        ));
+    }
+
+    // RGB ve parlaklık değerlerini 0-255 aralığında tutar
+    private int renkMenzilSaglama(int value) {
+        if (value < 0) return 0;
+        if (value > 255) return 255;
+        return value;
+    }
+
+    // SeekBar listener yazarken kullanılmayan metotları boş geçmek için yardımcı sınıf
+    public abstract static class SimpleSeekBarListener implements SeekBar.OnSeekBarChangeListener {
+
         @Override
         public void onStartTrackingTouch(SeekBar seekBar) {
         }

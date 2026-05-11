@@ -7,14 +7,17 @@
 
 #define DEVICE_NAME "ESP32-GAS-LED"
 
+// Android uygulamasındaki UUID değerleriyle aynı olmalı
 #define SERVICE_UUID   "12345678-1234-1234-1234-1234567890ab"
 #define GAS_UUID       "12345678-1234-1234-1234-1234567890ac"
 #define CONTROL_UUID   "12345678-1234-1234-1234-1234567890ad"
 
+// MQ-2 gaz sensörü ve WS2812 RGB LED pinleri
 const int GAS_PIN = 4;
 const int WS2812_PIN = 48;
 const int LED_COUNT = 1;
 
+// ESP32'nin telefona durum bilgisini gönderme aralığı
 const unsigned long SEND_INTERVAL_MS = 200;
 
 Adafruit_NeoPixel strip(LED_COUNT, WS2812_PIN, NEO_GRB + NEO_KHZ800);
@@ -24,22 +27,26 @@ bool phoneConnected = false;
 
 unsigned long lastSendTime = 0;
 
+// LED'in son durumu ve renk bilgileri burada tutulur
 bool ledOn = false;
 int red = 255;
 int green = 0;
 int blue = 0;
 int brightness = 255;
 
+// RGB ve parlaklık değerlerinin 0-255 aralığında kalmasını sağlamak için
 int clampValue(int value) {
   if (value < 0) return 0;
   if (value > 255) return 255;
   return value;
 }
 
+// Parlaklık değerini renklere uygulamak için
 int applyBrightness(int color, int brightnessValue) {
   return clampValue(color) * clampValue(brightnessValue) / 255;
 }
 
+// Güncel RGB ve parlaklık değerlerine göre ledi günceller
 void updateLed() {
   int r = ledOn ? red : 0;
   int g = ledOn ? green : 0;
@@ -53,6 +60,7 @@ void updateLed() {
   strip.show();
 }
 
+// Telefonun bağlanma ve ayrılma durumları burada yakalanır
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* server) {
     phoneConnected = true;
@@ -62,10 +70,13 @@ class MyServerCallbacks : public BLEServerCallbacks {
   void onDisconnect(BLEServer* server) {
     phoneConnected = false;
     Serial.println("Telefon ayrildi");
+
+    // Telefon ayrıldıktan sonra ESP32 tekrar görünür hale gelir
     BLEDevice::startAdvertising();
   }
 };
 
+// Android'den gelen led kontrol komutları burada işlenir
 class ControlCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* characteristic) {
     String data = characteristic->getValue();
@@ -83,6 +94,7 @@ class ControlCallbacks : public BLECharacteristicCallbacks {
       return;
     }
 
+    // Kısa alan adları ve uzun alan adları birlikte desteklenecek şekilde yapıldı
     if (json.containsKey("l")) {
       ledOn = json["l"].as<bool>();
     } else if (json.containsKey("ledOn")) {
@@ -126,12 +138,14 @@ void setupBle() {
 
   BLEService* service = server->createService(SERVICE_UUID);
 
+  // Android bu characteristic üzerinden gaz ve led durum bilgisini alır
   stateCharacteristic = service->createCharacteristic(
     GAS_UUID,
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY
   );
   stateCharacteristic->addDescriptor(new BLE2902());
 
+  // Android led kontrol komutlarını bu characteristic'e yazar
   BLECharacteristic* controlCharacteristic = service->createCharacteristic(
     CONTROL_UUID,
     BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR
@@ -149,6 +163,7 @@ void setupBle() {
   Serial.println("BLE basladi");
 }
 
+// MQ-2 gaz değeri ve led bilgileri JSON olarak Android'e gönderilir
 void sendState() {
   int gasValue = analogRead(GAS_PIN);
 
@@ -192,6 +207,7 @@ void setup() {
 void loop() {
   unsigned long now = millis();
 
+  // Belirlenen aralık dolduğunda yeni sensör durumu gönderilir
   if (now - lastSendTime >= SEND_INTERVAL_MS) {
     lastSendTime = now;
     sendState();

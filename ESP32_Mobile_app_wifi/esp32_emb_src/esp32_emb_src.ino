@@ -18,6 +18,8 @@ const char* MQTT_PASSWORD = "password";
 
 const char* DEVICE_ID = "esp32-s3-001";
 
+// ESP32 sensör verisini telemetry topic'ine gönderir
+// Backend LED komutlarını control topic'i üzerinden ESP32'ye yollar
 const char* TELEMETRY_TOPIC = "iot/esp32-s3-001/telemetry";
 const char* CONTROL_TOPIC = "iot/esp32-s3-001/control";
 
@@ -34,13 +36,13 @@ Adafruit_NeoPixel strip(
   NEO_GRB + NEO_KHZ800
 );
 
-// Zamanlama
+// Telemetry gönderme aralığı
 const unsigned long TELEMETRY_INTERVAL_MS = 200;
 unsigned long nextTelemetryTime = 0;
 
 unsigned long lastDebugPrintTime = 0;
 
-// Durum
+// ESP32 üzerinde uygulanan son led durumu
 bool currentLedOn = false;
 int currentRed = 255;
 int currentGreen = 0;
@@ -50,13 +52,14 @@ int currentBrightness = 255;
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 
-// Yardımcı fonksiyonlar
+// Değerleri 0-255 aralığında tutmak için
 int clampValue(int value) {
   if (value < 0) return 0;
   if (value > 255) return 255;
   return value;
 }
 
+// Renk kanalına parlaklık oranını uygular
 int applyBrightness(int colorValue, int brightness) {
   colorValue = clampValue(colorValue);
   brightness = clampValue(brightness);
@@ -90,6 +93,7 @@ void setRgbLed(bool ledOn, int red, int green, int blue, int brightness) {
   strip.show();
 }
 
+// LED başlangıç ayarları yapılır
 void setupRgbLed() {
   strip.begin();
   strip.clear();
@@ -98,7 +102,7 @@ void setupRgbLed() {
   setRgbLed(false, 255, 0, 0, 255);
 }
 
-// Wi-Fi
+// ESP32 Wi-Fi ağına bağlanır
 void connectWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -118,7 +122,7 @@ void connectWiFi() {
   Serial.println(WiFi.localIP());
 }
 
-// MQTT control mesajı geldiğinde
+// MQTT control mesajı geldiğinde çalışır
 void onMqttMessage(char* topic, byte* payload, unsigned int length) {
   char message[512];
 
@@ -157,10 +161,11 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
   int blue = json["blue"] | currentBlue;
   int brightness = json["brightness"] | currentBrightness;
 
+  // Backend'den gelen komut lede uygulanır
   setRgbLed(ledOn, red, green, blue, brightness);
 }
 
-// MQTT bağlantısı
+// MQTT broker bağlantısı yapılır ve control topic'ine abone olunur
 void connectMqtt() {
   while (!mqttClient.connected()) {
     Serial.print("MQTT baglaniyor... ");
@@ -188,7 +193,7 @@ void connectMqtt() {
   }
 }
 
-// Telemetry publish
+// Gaz değeri ve led durumu MQTT telemetry topic'ine gönderilir
 void publishTelemetry() {
   int gasValue = analogRead(GAS_PIN);
 
@@ -214,6 +219,7 @@ void publishTelemetry() {
 
   unsigned long now = millis();
 
+  // Seri port çıktısı her 1 saniyede bir yazdırılır
   if (now - lastDebugPrintTime >= 1000) {
     lastDebugPrintTime = now;
 
@@ -268,6 +274,7 @@ void loop() {
 
   unsigned long now = millis();
 
+  // Telemetry gönderimi millis tabanlı kontrol edilir
   if ((long)(now - nextTelemetryTime) >= 0) {
     nextTelemetryTime += TELEMETRY_INTERVAL_MS;
 

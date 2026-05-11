@@ -10,9 +10,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+// Aktif WebSocket client'larına cihaz durumunu göndermek için kullanılır
 @Component
 public class DeviceWebSocketBroadcaster {
 
+    // Aynı anda bağlı olabilecek Android client'ları burada tutulur
     private final Set<WebSocketSession> sessions = new CopyOnWriteArraySet<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -26,6 +28,7 @@ public class DeviceWebSocketBroadcaster {
         System.out.println("WebSocket client ayrıldı. Aktif client: " + sessions.size());
     }
 
+    // Tek bir client'a mesaj göndermek için kullanılır
     public void sendToSession(WebSocketSession session, Map<String, Object> payload) {
         try {
             if (session == null || !session.isOpen()) {
@@ -44,6 +47,7 @@ public class DeviceWebSocketBroadcaster {
         }
     }
 
+    // Cihaz state mesajını WebSocket formatına uygun hale getirir
     public void broadcastState(Map<String, Object> state) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("type", "state");
@@ -52,6 +56,7 @@ public class DeviceWebSocketBroadcaster {
         broadcast(payload);
     }
 
+    // Hazırlanan mesaj tüm aktif WebSocket client'larına gönderilir
     public void broadcast(Map<String, Object> payload) {
         String json;
 

@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+// Wi-Fi sürümündeki ana ekran sınıfıdır
+// Gaz değerini, LED durumunu, RGB kontrolünü ve geçmiş kayıtları yönetir
 public class MainActivity extends Activity {
 
     private TextView connectionTextView;
@@ -56,22 +58,26 @@ public class MainActivity extends Activity {
     private Button purpleButton;
     private Button offButton;
 
+    // Kullanıcının ekranda ayarladığı son led değerleri burada tutulur
     private boolean currentLedOn = false;
     private int currentRed = 255;
     private int currentGreen = 0;
     private int currentBlue = 0;
     private int currentBrightness = 255;
 
+    // UI güncellemesi sırasında listener'ların gereksiz tetiklenmesini önlemek için kullanılır
     private boolean ignoreControlEvents = false;
     private long lastLocalControlChangeMs = 0;
 
     private DeviceApiClient apiClient;
     private DeviceWebSocketClient webSocketClient;
 
+    // Geçmiş veriler ayrı bir thread'de alınır, UI işlemleri ana threadde yapılır
     private final ExecutorService historyExecutor = Executors.newSingleThreadExecutor();
     private final Handler historyRefreshHandler = new Handler(Looper.getMainLooper());
     private final Handler controlHandler = new Handler(Looper.getMainLooper());
 
+    // Kontrol komutunu kısa bir gecikmeyle göndermek için kullanılır
     private final Runnable sendControlRunnable = new Runnable() {
         @Override
         public void run() {
@@ -79,6 +85,7 @@ public class MainActivity extends Activity {
         }
     };
 
+    // Geçmiş kayıtlar belirli aralıklarla otomatik yenilenir
     private final Runnable historyRefreshRunnable = new Runnable() {
         @Override
         public void run() {
@@ -94,6 +101,7 @@ public class MainActivity extends Activity {
 
         apiClient = new DeviceApiClient();
 
+        // WebSocket olayları burada dinlenir ve ekrana yansıtılır
         webSocketClient = new DeviceWebSocketClient(new DeviceWebSocketClient.Listener() {
             @Override
             public void onConnected() {
@@ -130,6 +138,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
 
+        // Uygulama tekrar açıldığında WebSocket kopmuşsa yeniden bağlanılır
         if (!webSocketClient.isConnected()) {
             webSocketClient.connect();
         }
@@ -141,6 +150,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
 
+        // Arka plana geçince bekleyen yenileme ve kontrol gönderimleri durdurulur
         historyRefreshHandler.removeCallbacks(historyRefreshRunnable);
         controlHandler.removeCallbacks(sendControlRunnable);
     }
@@ -149,10 +159,12 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
 
+        // Activity kapanırken WebSocket ve thread kaynakları temizlenir
         webSocketClient.close();
         historyExecutor.shutdown();
     }
 
+    // XML'deki arayüz elemanları Java tarafındaki değişkenlere bağlanır
     private void bindViews() {
         connectionTextView = findViewById(R.id.connectionTextView);
         gasTextView = findViewById(R.id.gasTextView);
@@ -183,6 +195,7 @@ public class MainActivity extends Activity {
         offButton = findViewById(R.id.offButton);
     }
 
+    // Uygulama ilk açıldığında ekranda gösterilecek varsayılan değerler hazırlanır
     private void setupInitialUi() {
         showDisconnected();
 
@@ -194,6 +207,7 @@ public class MainActivity extends Activity {
         updateLocalControlUi();
     }
 
+    // RGB ve parlaklık SeekBar kontrolleri ayarlanır
     private void setupSeekBars() {
         redSeekBar.setMax(255);
         greenSeekBar.setMax(255);
@@ -246,6 +260,7 @@ public class MainActivity extends Activity {
         });
     }
 
+    // Hazır renk butonlarının görsel renkleri ve tıklama olayları ayarlanır
     private void setupButtons() {
         redButton.setBackgroundColor(Color.rgb(220, 40, 40));
         greenButton.setBackgroundColor(Color.rgb(40, 160, 70));
@@ -272,6 +287,7 @@ public class MainActivity extends Activity {
         offButton.setOnClickListener(v -> applyPreset(false, currentRed, currentGreen, currentBlue, currentBrightness));
     }
 
+    // Hazır renklerden biri seçildiğinde yerel kontrol değerleri güncellenir
     private void applyPreset(boolean ledOn, int red, int green, int blue, int brightness) {
         currentLedOn = ledOn;
         currentRed = clamp(red);
@@ -282,6 +298,7 @@ public class MainActivity extends Activity {
         markLocalControlChanged();
     }
 
+    // Kullanıcının kontrol değiştirdiği zaman kaydedilir ve komut gönderimi planlanır
     private void markLocalControlChanged() {
         lastLocalControlChangeMs = System.currentTimeMillis();
 
@@ -289,11 +306,13 @@ public class MainActivity extends Activity {
         scheduleControlSend();
     }
 
+    // Çok hızlı değişikliklerde her adımı göndermek yerine kısa gecikmeyle son değer gönderilir
     private void scheduleControlSend() {
         controlHandler.removeCallbacks(sendControlRunnable);
         controlHandler.postDelayed(sendControlRunnable, AppConfig.CONTROL_DEBOUNCE_MS);
     }
 
+    // Güncel LED komutu WebSocket üzerinden backend'e gönderilir
     private void sendControl() {
         ControlCommand command = new ControlCommand(
                 currentLedOn,
@@ -310,6 +329,7 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Geçmiş kayıtlar arka planda backend REST API'den alınır
     private void loadHistory() {
         historyExecutor.execute(() -> {
             try {
@@ -325,6 +345,7 @@ public class MainActivity extends Activity {
         });
     }
 
+    // WebSocket'ten gelen son cihaz durumu ekrana yansıtılır
     private void updateLatestUi(DeviceState state, boolean updateControlsFromServer) {
         if (!state.isDeviceConnected()) {
             showDisconnected();
@@ -352,6 +373,7 @@ public class MainActivity extends Activity {
 
         updateTextView.setText("Son Güncelleme: " + state.getUpdatedAt());
 
+        // Kullanıcı yeni ayar yaptıysa, kısa süre boyunca backend'den gelen değerler kontrolleri ezmesin
         boolean recentlyChangedLocally =
                 System.currentTimeMillis() - lastLocalControlChangeMs < 700;
 
@@ -366,11 +388,13 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Geçmiş kayıtlar okunabilir tablo görünümünde TextView'e yazılır.
     private void updateHistoryUi(List<HistoryItem> historyItems) {
         historyTextView.setTypeface(Typeface.MONOSPACE);
         historyTextView.setText(HistoryFormatter.format(historyItems));
     }
 
+    // Yerel LED değerleri switch, seekbar ve renk önizleme alanına uygulanır
     private void updateLocalControlUi() {
         ignoreControlEvents = true;
 
@@ -398,16 +422,19 @@ public class MainActivity extends Activity {
         ));
     }
 
+    // Bağlantı durumu ekranda yeşil renkle gösterilir
     private void showConnected() {
         connectionTextView.setText("Cihaz Bağlantısı: Bağlı");
         connectionTextView.setTextColor(Color.rgb(30, 140, 60));
     }
 
+    // Bağlantı yoksa durum kırmızı renkle gösterilir
     private void showDisconnected() {
         connectionTextView.setText("Cihaz Bağlantısı: Bağlı Değil");
         connectionTextView.setTextColor(Color.rgb(180, 30, 30));
     }
 
+    // Cihaz bağlı değilken LED kontrol elemanları pasif hale getirilir
     private void setControlViewsEnabled(boolean enabled) {
         ledSwitch.setEnabled(enabled);
 
@@ -432,6 +459,7 @@ public class MainActivity extends Activity {
         return value;
     }
 
+    // Kullanılmayan SeekBar metotlarını her seferinde yazmamak için basit yardımcı sınıf
     public abstract static class SimpleSeekBarListener implements SeekBar.OnSeekBarChangeListener {
 
         @Override

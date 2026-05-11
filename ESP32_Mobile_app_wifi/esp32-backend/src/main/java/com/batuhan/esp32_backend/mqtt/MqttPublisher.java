@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+// Backend tarafından ESP32'ye MQTT control mesajı göndermek için kullanılır
 @Component
 public class MqttPublisher {
 
@@ -29,6 +30,7 @@ public class MqttPublisher {
 
     private MqttClient client;
 
+    // Uygulama açıldığında MQTT broker'a publisher olarak bağlanılır
     @PostConstruct
     public void connect() throws Exception {
         String clientId = "spring-publisher-" + UUID.randomUUID();
@@ -54,6 +56,7 @@ public class MqttPublisher {
         System.out.println("MQTT Publisher bağlandı: " + broker);
     }
 
+    // Android'den gelen LED komutu MQTT control topic'ine publish edilir
     public synchronized void publishControl(String payload) {
         try {
             if (client == null || !client.isConnected()) {
@@ -76,6 +79,7 @@ public class MqttPublisher {
         }
     }
 
+    // Uygulama kapanırken MQTT bağlantısı kapatılır
     @PreDestroy
     public void disconnect() throws Exception {
         if (client != null && client.isConnected()) {

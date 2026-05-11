@@ -2,6 +2,7 @@ package com.batuhan.esp32_mobile.model;
 
 import org.json.JSONObject;
 
+// Backend'den gelen anlık cihaz durumunu temsil eder
 public class DeviceState {
 
     private final boolean deviceConnected;
@@ -33,6 +34,7 @@ public class DeviceState {
         this.updatedAt = updatedAt;
     }
 
+    // WebSocket'ten gelen JSON mesajı DeviceState nesnesine dönüştürülür
     public static DeviceState fromJson(JSONObject jsonObject) {
         boolean deviceConnected = jsonObject.optBoolean("deviceConnected", false);
 

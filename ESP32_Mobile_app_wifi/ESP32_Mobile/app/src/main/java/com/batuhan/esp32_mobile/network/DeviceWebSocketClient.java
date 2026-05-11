@@ -17,8 +17,10 @@ import okhttp3.Response;
 import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 
+// Android uygulamasının backend ile WebSocket üzerinden haberleşmesini sağlar
 public class DeviceWebSocketClient {
 
+    // WebSocket olaylarını MainActivity tarafına bildirmek için kullanılır
     public interface Listener {
         void onConnected();
         void onDisconnected();
@@ -34,6 +36,7 @@ public class DeviceWebSocketClient {
     private WebSocket webSocket;
     private boolean connected = false;
 
+    // Bağlantı koparsa belirli süre sonra tekrar bağlanmayı dener
     private final Runnable reconnectRunnable = new Runnable() {
         @Override
         public void run() {
@@ -52,6 +55,7 @@ public class DeviceWebSocketClient {
                 .build();
     }
 
+    // Backend WebSocket endpointine bağlantı başlatılır
     public void connect() {
         if (webSocket != null) {
             webSocket.cancel();
@@ -76,6 +80,7 @@ public class DeviceWebSocketClient {
                     JSONObject jsonObject = new JSONObject(text);
                     String type = jsonObject.optString("type", "");
 
+                    // Backend cihaz durumunu type=state olarak gönderir
                     if ("state".equals(type)) {
                         DeviceState state = DeviceState.fromJson(jsonObject);
                         mainHandler.post(() -> listener.onStateReceived(state));
@@ -113,6 +118,7 @@ public class DeviceWebSocketClient {
         });
     }
 
+    // LED kontrol komutu WebSocket üzerinden backend'e gönderilir
     public boolean sendControl(ControlCommand command) {
         if (webSocket == null || !connected) {
             return false;
@@ -129,6 +135,7 @@ public class DeviceWebSocketClient {
         return connected;
     }
 
+    // Activity kapanırken bağlantı ve yeniden bağlanma işleri temizlenir
     public void close() {
         reconnectHandler.removeCallbacks(reconnectRunnable);
 
